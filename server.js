@@ -1,51 +1,50 @@
 
-const express = require('express');
+import express from 'express';
+import Stripe from 'stripe';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
 const app = express();
-// Initialize stripe with a key from environment variables
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const port = process.env.PORT || 3000;
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
 
-// Use express.static to serve the React app from the 'dist' directory
-app.use(express.static('dist'));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Middleware to parse JSON bodies
-app.use(express.json());
+app.use(express.static(join(__dirname, 'dist')));
 
 app.post('/create-checkout-session', async (req, res) => {
-  // Dynamically determine the base URL for success and cancel URLs
-  const baseUrl = req.protocol + '://' + req.get('host');
-
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: 'brl',
+            currency: 'usd',
             product_data: {
-              name: 'Marta PRO',
+              name: 'Marta-Intelligence',
             },
-            unit_amount: 9900, // R$99,00
+            unit_amount: 2000,
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: `${baseUrl}/success`,
-      cancel_url: `${baseUrl}/cancel`,
+      success_url: `${baseUrl}/success.html`,
+      cancel_url: `${baseUrl}/cancel.html`,
     });
-
     res.json({ id: session.id });
   } catch (error) {
-    console.error('Error creating Stripe session:', error);
+    console.error('Error creating checkout session:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-// Fallback for client-side routing: serve index.html for any unknown paths
 app.get('*', (req, res) => {
-    res.sendFile('index.html', { root: 'dist' });
+  res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 
-// Use the port from environment variables or default to 4242
-const PORT = process.env.PORT || 4242;
-app.listen(PORT, () => console.log(`Running on port ${PORT}`));
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
