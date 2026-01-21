@@ -1,0 +1,198 @@
+import React, { useState } from 'react';
+import { NeuralBackground } from './NeuralBackground';
+import { MartaLogo } from './MartaLogo';
+
+interface LibraryPageProps {
+  onBack: () => void;
+}
+
+interface LibraryItem {
+  id: string;
+  type: 'image' | 'video' | 'text';
+  title: string;
+  date: string;
+  content: string; // URL for media, snippet for text
+  tags: string[];
+}
+
+// Mock Data
+const MOCK_ITEMS: LibraryItem[] = [
+  {
+    id: '1',
+    type: 'image',
+    title: 'Arquitetura Brutalista',
+    date: 'Hoje, 10:23',
+    content: 'https://images.unsplash.com/photo-1518005052357-e984334cb994?auto=format&fit=crop&q=80&w=800',
+    tags: ['Design', 'Conceito']
+  },
+  {
+    id: '2',
+    type: 'text',
+    title: 'Minuta de Contrato SaaS',
+    date: 'Ontem, 15:40',
+    content: 'CLÁUSULA PRIMEIRA - DO OBJETO: O presente contrato tem como objeto a licença de uso de software...',
+    tags: ['Jurídico', 'Draft']
+  },
+  {
+    id: '3',
+    type: 'video',
+    title: 'Conceito Campanha Nike',
+    date: '23 Out, 2024',
+    content: 'https://assets.mixkit.co/videos/preview/mixkit-futuristic-city-traffic-at-night-34563-large.mp4', // Placeholder video
+    tags: ['Marketing', 'Veo']
+  },
+  {
+    id: '4',
+    type: 'image',
+    title: 'Dashboard Financeiro UI',
+    date: '22 Out, 2024',
+    content: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800',
+    tags: ['UI/UX', 'Finance']
+  },
+  {
+    id: '5',
+    type: 'text',
+    title: 'Copy Email Marketing',
+    date: '20 Out, 2024',
+    content: 'Assunto: Sua produtividade nunca mais será a mesma. Olá [Nome], imagine ter um segundo cérebro...',
+    tags: ['Marketing', 'Vendas']
+  },
+  {
+    id: '6',
+    type: 'image',
+    title: 'Render Interior Minimalista',
+    date: '18 Out, 2024',
+    content: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800',
+    tags: ['Arquitetura', '3D']
+  }
+];
+
+export const LibraryPage: React.FC<LibraryPageProps> = ({ onBack }) => {
+  const [filter, setFilter] = useState<'all' | 'image' | 'video' | 'text'>('all');
+
+  const filteredItems = filter === 'all' 
+    ? MOCK_ITEMS 
+    : MOCK_ITEMS.filter(item => item.type === filter);
+
+  return (
+    <div className="min-h-screen text-gray-900 dark:text-gray-100 font-sans relative bg-gray-50 dark:bg-black transition-colors duration-300">
+      <div className="fixed inset-0 z-0 opacity-30 pointer-events-none">
+        <NeuralBackground />
+      </div>
+
+      {/* Header */}
+      <div className="relative z-20 pt-8 pb-6 px-6 md:px-12 border-b border-gray-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-black/50 backdrop-blur-md sticky top-0">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+                <button 
+                    onClick={onBack}
+                    className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors text-gray-500"
+                >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <div>
+                    <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        Biblioteca
+                        <span className="text-xs font-mono font-normal text-gray-400 bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full border border-gray-200 dark:border-neutral-700">
+                            {MOCK_ITEMS.length} itens
+                        </span>
+                    </h1>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                {(['all', 'image', 'video', 'text'] as const).map((type) => (
+                    <button
+                        key={type}
+                        onClick={() => setFilter(type)}
+                        className={`
+                            px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap
+                            ${filter === type 
+                                ? 'bg-brand-purple text-white shadow-lg shadow-brand-purple/20' 
+                                : 'bg-white dark:bg-neutral-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800'}
+                        `}
+                    >
+                        {type === 'all' && 'Todos'}
+                        {type === 'image' && 'Imagens'}
+                        {type === 'video' && 'Vídeos'}
+                        {type === 'text' && 'Textos'}
+                    </button>
+                ))}
+            </div>
+        </div>
+      </div>
+
+      {/* Content Grid */}
+      <div className="relative z-10 p-6 md:p-12 max-w-7xl mx-auto min-h-[80vh]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredItems.map((item) => (
+                <div 
+                    key={item.id}
+                    className="group relative bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full"
+                >
+                    {/* Media Preview */}
+                    <div className="aspect-[4/3] bg-gray-100 dark:bg-neutral-800 relative overflow-hidden">
+                        {item.type === 'image' && (
+                            <img src={item.content} alt={item.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" />
+                        )}
+                        {item.type === 'video' && (
+                            <div className="w-full h-full relative group-hover:opacity-90 transition-opacity">
+                                <video src={item.content} className="w-full h-full object-cover" muted loop onMouseOver={e => e.currentTarget.play()} onMouseOut={e => e.currentTarget.pause()} />
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {item.type === 'text' && (
+                            <div className="w-full h-full p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-neutral-800 dark:to-neutral-900 flex flex-col">
+                                <div className="text-gray-400 mb-2">
+                                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-4 font-mono leading-relaxed">
+                                    {item.content}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Hover Overlay Actions */}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2 backdrop-blur-[2px]">
+                            <button className="p-2 bg-white dark:bg-black rounded-full hover:scale-110 transition-transform text-gray-900 dark:text-white shadow-lg">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            </button>
+                            <button className="p-2 bg-white dark:bg-black rounded-full hover:scale-110 transition-transform text-gray-900 dark:text-white shadow-lg">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Meta Data */}
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                            <h3 className="font-semibold text-gray-900 dark:text-white mb-1 truncate" title={item.title}>{item.title}</h3>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {item.tags.map(tag => (
+                                    <span key={tag} className="text-[10px] uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                                        {tag}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800">
+                             <span className="text-xs text-gray-400">{item.date}</span>
+                             <div className="text-xs font-medium text-brand-purple">
+                                {item.type === 'image' && 'IMG'}
+                                {item.type === 'video' && 'VEO'}
+                                {item.type === 'text' && 'DOC'}
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+};

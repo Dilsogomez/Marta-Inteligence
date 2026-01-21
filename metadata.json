@@ -1,0 +1,8 @@
+{
+  "name": "Marta",
+  "description": "Marta: A futuristic AI assistant for business and creativity.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
