@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NeuralBackground } from './NeuralBackground';
 import { MartaLogo } from './MartaLogo';
+import { CheckoutModal } from './CheckoutModal';
 
 interface PricingPageProps {
-  onBack: () => void;
+  onNavigate: (view: 'chat' | 'features' | 'library' | 'solutions' | 'pricing') => void;
   onLogin: () => void;
+  isDarkMode: boolean;
+  toggleTheme: () => void;
+  availableCredits: number;
+  onPurchase: (amount: number) => void;
 }
 
 const PLANS = [
@@ -71,32 +76,87 @@ const CONSUMPTION_RATES = [
     { action: 'Vídeo', cost: '50 Créditos', icon: '🎬' },
 ];
 
-export const PricingPage: React.FC<PricingPageProps> = ({ onBack, onLogin }) => {
+export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onLogin, isDarkMode, toggleTheme, availableCredits, onPurchase }) => {
+  const [selectedPlan, setSelectedPlan] = useState<typeof PLANS[0] | null>(null);
+
+  const handlePlanClick = (plan: typeof PLANS[0]) => {
+      if (plan.price === '0') {
+          onLogin(); // Or directly navigate to chat if auth not required for free tier logic
+      } else {
+          setSelectedPlan(plan);
+      }
+  };
+
   return (
     <div className="min-h-screen text-gray-900 dark:text-gray-100 font-sans relative overflow-x-hidden bg-gray-50 dark:bg-black transition-colors duration-300 flex flex-col">
       <div className="fixed inset-0 z-0 opacity-40 pointer-events-none">
         <NeuralBackground />
       </div>
 
-      {/* Compact Header */}
-      <div className="relative z-20 py-4 px-6 md:px-12 flex justify-between items-center backdrop-blur-sm sticky top-0 border-b border-gray-200/50 dark:border-neutral-800/50 h-16 shrink-0">
-        <div 
-            onClick={() => window.location.reload()}
-            className="flex items-center gap-2 cursor-pointer group"
-            title="Recarregar aplicação"
-        >
-             <div className="w-6 h-6 drop-shadow-[0_0_12px_rgba(37,99,235,0.6)] group-hover:scale-110 transition-transform">
-                <MartaLogo className="w-full h-full" />
-            </div>
-        </div>
-        <div className="flex gap-3">
-             <button onClick={onBack} className="hidden md:block px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                Voltar
-            </button>
-            <button onClick={onLogin} className="px-4 py-1.5 rounded-full bg-gray-900 dark:bg-white text-white dark:text-black font-bold text-xs hover:shadow-lg transition-all transform hover:scale-105">
-                Acessar
-            </button>
-        </div>
+      {selectedPlan && (
+          <CheckoutModal 
+            plan={selectedPlan}
+            onClose={() => setSelectedPlan(null)}
+            onSuccess={(amount) => {
+                onPurchase(amount);
+                setSelectedPlan(null);
+            }}
+          />
+      )}
+
+      {/* Header Bar - Replicated from App.tsx */}
+      <div className="py-4 px-6 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md z-40 transition-colors duration-300 relative sticky top-0 border-b border-gray-200/50 dark:border-neutral-800/50">
+          <div className="flex items-center gap-3">
+              {/* Logo */}
+              <div 
+                  onClick={() => onNavigate('chat')}
+                  className="flex items-center gap-2 cursor-pointer transition-all hover:scale-105 group"
+                  title="Início"
+              >
+                  <div className="w-8 h-8">
+                      <MartaLogo className="w-full h-full" />
+                  </div>
+              </div>
+
+              {/* Nav Links */}
+              <nav className="hidden md:flex items-center gap-6 ml-6 border-l border-gray-200 dark:border-neutral-800 pl-6 h-6">
+                  <button onClick={() => onNavigate('features')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Funcionalidades</button>
+                  <button onClick={() => onNavigate('library')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Biblioteca</button>
+                  <button onClick={() => onNavigate('solutions')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Soluções</button>
+                  <button onClick={() => onNavigate('pricing')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Preços</button>
+                  <button onClick={onLogin} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Sobre</button>
+              </nav>
+          </div>
+          
+          <div className="flex items-center gap-3">
+               {/* Dark Mode Toggle */}
+              <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-neutral-800 transition-colors"
+              >
+                  {isDarkMode ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                  ) : (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                  )}
+              </button>
+
+              <div className="flex items-center gap-3">
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border border-brand-purple/30 bg-brand-purple/5 dark:bg-brand-purple/10">
+                       <div className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-blue to-brand-pink animate-pulse"></div>
+                       <span className="text-xs font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink">
+                           {availableCredits} Créditos
+                       </span>
+                  </div>
+                  <button 
+                      onClick={onLogin}
+                      className="px-5 py-2 rounded-full bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink text-white text-xs font-bold tracking-wide hover:shadow-lg hover:shadow-brand-purple/20 hover:scale-105 transition-all flex items-center gap-2 group"
+                  >
+                      <span>Entrar</span>
+                      <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  </button>
+              </div>
+          </div>
       </div>
 
       {/* Main Content Container - Flex centered to fill remaining height */}
@@ -160,7 +220,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onBack, onLogin }) => 
                     </div>
 
                     <button 
-                        onClick={onLogin}
+                        onClick={() => handlePlanClick(plan)} 
                         className={`
                             w-full py-2.5 rounded-lg font-bold text-sm mt-4 transition-all
                             ${plan.highlight 

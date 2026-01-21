@@ -35,7 +35,7 @@ const QUICK_ACTIONS = [
   { 
     label: 'Criar imagem', 
     prompt: 'Gere uma imagem de ', 
-    icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+    icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
     color: 'text-yellow-500',
     bg: 'bg-yellow-500/10',
     border: 'border-yellow-500/20 hover:border-yellow-500/50'
@@ -58,26 +58,36 @@ const QUICK_ACTIONS = [
   },
 ];
 
-function App() {
+export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<AppMode>(AppMode.CHAT);
   
+  // Model Selection State
+  const [modelMode, setModelMode] = useState<'fast' | 'thinking'>('fast');
+  const [showModelSelector, setShowModelSelector] = useState(false);
+  const modelSelectorRef = useRef<HTMLDivElement>(null);
+
   // Auth & Limit States (Simulating Credit System)
   const [creditsUsed, setCreditsUsed] = useState(0);
+  const [purchasedCredits, setPurchasedCredits] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register'>('login');
   
+  // Calculated total credits
+  const totalAvailableCredits = (INITIAL_FREE_CREDITS + purchasedCredits) - creditsUsed;
+
   // View State (Chat vs Features vs Library vs Solutions vs Pricing)
-  // 'auth' removed from views as it's now a modal
   const [view, setView] = useState<'chat' | 'features' | 'library' | 'solutions' | 'pricing'>('chat');
 
   // Agent System
   const [agents, setAgents] = useState<Agent[]>([]);
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
   
   // Chat History State (Mock Data for UI demonstration)
@@ -126,11 +136,14 @@ function App() {
     }
   }, []);
 
-  // Close profile menu when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
+      }
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+        setShowModelSelector(false);
       }
     };
 
@@ -154,18 +167,24 @@ function App() {
 
   // Helper to check limits
   const checkLimitAndProceed = (cost: number = 1): boolean => {
-    if (isLoggedIn) return true;
-    
-    // Simple demo logic: 10 credits per action for free tier to simulate usage
-    const actualCost = 10; 
-    
-    if (creditsUsed + actualCost > INITIAL_FREE_CREDITS) {
-      setShowLoginModal(true);
-      return false;
+    // If user has enough credits (free or purchased) they can proceed
+    if (totalAvailableCredits >= cost) {
+        setCreditsUsed(prev => prev + cost);
+        return true;
     }
     
-    setCreditsUsed(prev => prev + actualCost);
-    return true;
+    // Not enough credits
+    setShowLoginModal(true);
+    return false;
+  };
+
+  const handlePurchase = (amount: number) => {
+      setPurchasedCredits(prev => prev + amount);
+      setIsLoggedIn(true); // Account is required for purchase
+      // After purchase, go to chat if we were in pricing view
+      if (view === 'pricing') {
+          setView('chat');
+      }
   };
 
   const handleLoginSuccess = () => {
@@ -347,7 +366,8 @@ ${MARTA_SYSTEM_INSTRUCTION}
       let msgType: 'text' | 'image' | 'video' = 'text';
 
       const systemInstruction = getCurrentSystemInstruction();
-      const rawResponse = await sendMessageToGemini(history, userMsg.content, systemInstruction);
+      // Pass selected model mode here
+      const rawResponse = await sendMessageToGemini(history, userMsg.content, systemInstruction, modelMode);
       responseText = rawResponse;
 
       if (rawResponse.startsWith("Gerando imagem:")) {
@@ -444,20 +464,39 @@ ${MARTA_SYSTEM_INSTRUCTION}
   const hasMessages = messages.length > 0;
 
   // View Routing (Pages that replace the chat)
+  const handleNavigate = (target: 'chat' | 'features' | 'library' | 'solutions' | 'pricing') => {
+    setView(target);
+  };
+
+  // Auth Helper
+  const openAuthModal = (mode: 'login' | 'register' = 'login') => {
+      setAuthInitialMode(mode);
+      setShowAuthModal(true);
+  };
+
+  const sharedProps = {
+    onNavigate: handleNavigate,
+    onLogin: () => openAuthModal('login'), // Default behavior
+    isDarkMode,
+    toggleTheme,
+    availableCredits: totalAvailableCredits,
+    onPurchase: handlePurchase // Add prop
+  };
+
   if (view === 'features') {
-      return <FeaturesPage onBack={() => setView('chat')} onLogin={() => setShowAuthModal(true)} />;
+      return <FeaturesPage {...sharedProps} />;
   }
 
   if (view === 'library') {
-      return <LibraryPage onBack={() => setView('chat')} />;
+      return <LibraryPage {...sharedProps} />;
   }
 
   if (view === 'solutions') {
-      return <SolutionsPage onBack={() => setView('chat')} onLogin={() => setShowAuthModal(true)} />;
+      return <SolutionsPage {...sharedProps} />;
   }
 
   if (view === 'pricing') {
-      return <PricingPage onBack={() => setView('chat')} onLogin={() => setShowAuthModal(true)} />;
+      return <PricingPage {...sharedProps} />;
   }
 
   return (
@@ -465,7 +504,11 @@ ${MARTA_SYSTEM_INSTRUCTION}
       
       {/* Auth Modal Overlay */}
       {showAuthModal && (
-          <AuthPage onLoginSuccess={handleLoginSuccess} onClose={() => setShowAuthModal(false)} />
+          <AuthPage 
+            onLoginSuccess={handleLoginSuccess} 
+            onClose={() => setShowAuthModal(false)} 
+            initialIsRegister={authInitialMode === 'register'}
+          />
       )}
 
       {/* Login Limit Modal */}
@@ -484,7 +527,7 @@ ${MARTA_SYSTEM_INSTRUCTION}
                     <div className="space-y-2">
                         <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Créditos Esgotados</h2>
                         <p className="text-gray-600 dark:text-gray-300">
-                            Você utilizou todos os seus créditos gratuitos iniciais. Faça upgrade para continuar criando sem limites.
+                            Você utilizou todos os seus créditos. Faça upgrade para continuar criando sem limites.
                         </p>
                     </div>
 
@@ -530,6 +573,8 @@ ${MARTA_SYSTEM_INSTRUCTION}
             toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             chatSessions={chatSessions}
             onSelectSession={handleSelectSession}
+            isCollapsed={isSidebarCollapsed}
+            toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
       )}
 
@@ -545,14 +590,14 @@ ${MARTA_SYSTEM_INSTRUCTION}
                     </button>
                 )}
                 
-                {/* Marta Brand with GLOW EFFECT - ONLY WHEN LOGGED OUT */}
+                {/* Marta Brand - NO GLOW, NO TEXT */}
                 {!isLoggedIn && (
                     <div 
                         onClick={() => window.location.reload()}
                         className="flex items-center gap-2 cursor-pointer transition-all hover:scale-105 group"
                         title="Recarregar aplicação"
                     >
-                        <div className="w-8 h-8 drop-shadow-[0_0_12px_rgba(37,99,235,0.6)]">
+                        <div className="w-8 h-8">
                             <MartaLogo className="w-full h-full" />
                         </div>
                     </div>
@@ -566,7 +611,7 @@ ${MARTA_SYSTEM_INSTRUCTION}
                             <button onClick={() => setView('library')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Biblioteca</button>
                             <button onClick={() => setView('solutions')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Soluções</button>
                             <button onClick={() => setView('pricing')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Preços</button>
-                            <button onClick={() => setShowAuthModal(true)} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Sobre</button>
+                            <button onClick={() => openAuthModal('login')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Sobre</button>
                         </nav>
                     </>
                 )}
@@ -587,22 +632,25 @@ ${MARTA_SYSTEM_INSTRUCTION}
 
                 {!isLoggedIn && (
                     <div className="flex items-center gap-3">
-                        <div className="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-neutral-800 px-3 py-1 rounded-full border border-gray-200 dark:border-neutral-700 hidden sm:flex items-center gap-2">
-                             <div className="w-2 h-2 rounded-full bg-brand-purple animate-pulse"></div>
-                             {INITIAL_FREE_CREDITS - creditsUsed} Créditos
-                        </div>
+                         <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border border-brand-purple/30 bg-brand-purple/5 dark:bg-brand-purple/10">
+                              <div className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-blue to-brand-pink animate-pulse"></div>
+                              <span className="text-xs font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink">
+                                  {totalAvailableCredits} Créditos
+                              </span>
+                         </div>
                         <button 
-                            onClick={() => setShowAuthModal(true)}
-                            className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-gray-200 dark:border-neutral-700 text-xs font-medium text-gray-900 dark:text-gray-200 transition-all flex items-center gap-2"
+                            onClick={() => openAuthModal('login')}
+                            className="px-5 py-2 rounded-full bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink text-white text-xs font-bold tracking-wide hover:shadow-lg hover:shadow-brand-purple/20 hover:scale-105 transition-all flex items-center gap-2 group"
                         >
                             <span>Entrar</span>
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
+                            <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                         </button>
                     </div>
                 )}
                 
                 {isLoggedIn && (
                     <div className="relative" ref={profileMenuRef}>
+                        {/* ... Profile Button ... */}
                         <button 
                             onClick={() => setShowProfileMenu(!showProfileMenu)}
                             className="w-10 h-10 rounded-full bg-gray-200 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 flex items-center justify-center text-gray-500 dark:text-gray-300 cursor-pointer hover:bg-gray-300 dark:hover:bg-neutral-600 transition-colors outline-none focus:ring-2 focus:ring-brand-purple/50"
@@ -616,6 +664,9 @@ ${MARTA_SYSTEM_INSTRUCTION}
                                 <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">Minha Conta</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">usuario@marta.ai</p>
+                                    <div className="mt-2 text-xs font-mono text-brand-purple font-bold">
+                                        {totalAvailableCredits} Créditos Disponíveis
+                                    </div>
                                 </div>
                                 
                                 <div className="py-1">
@@ -646,7 +697,6 @@ ${MARTA_SYSTEM_INSTRUCTION}
         <div className="flex-1 overflow-y-auto no-scrollbar px-4 sm:px-6 py-6 pb-32 max-w-4xl mx-auto w-full">
             {!hasMessages ? (
                 <div className="hidden">
-                   {/* Empty state is now handled by the Start Screen in the Input Area */}
                 </div>
             ) : (
                 <div className="space-y-6">
@@ -706,7 +756,7 @@ ${MARTA_SYSTEM_INSTRUCTION}
                                             className="p-2 rounded-full text-gray-400 hover:text-brand-purple hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors"
                                             title="Imprimir"
                                         >
-                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                                         </button>
 
                                         {/* Share Button */}
@@ -737,19 +787,16 @@ ${MARTA_SYSTEM_INSTRUCTION}
             ? "absolute inset-0 top-[73px] bg-white dark:bg-black z-30 flex flex-col items-center justify-center p-6 animate-in fade-in duration-500" 
             : "absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-white via-white dark:from-black dark:via-black to-transparent pt-10 z-20"
         }>
-            
             {/* Greeting (Only in Start Mode) */}
-            {!hasMessages && (
+             {!hasMessages && (
                 <div className="space-y-4 mb-8 text-center animate-in slide-in-from-bottom-4 duration-700">
-                    <div className="w-24 h-24 mx-auto mb-6">
-                        {currentAgentId ? (
+                    {currentAgentId && (
+                        <div className="w-24 h-24 mx-auto mb-6">
                             <div className="w-full h-full rounded-2xl bg-gray-100 dark:bg-neutral-800 flex items-center justify-center text-4xl font-bold text-gray-400">
                                 {agents.find(a => a.id === currentAgentId)?.name.substring(0,1)}
                             </div>
-                        ) : (
-                            <MartaLogo className="w-full h-full" />
-                        )}
-                    </div>
+                        </div>
+                    )}
                     
                     {currentAgentId ? (
                         <>
@@ -765,15 +812,15 @@ ${MARTA_SYSTEM_INSTRUCTION}
                             <p className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 font-medium">
                                 Fale com a <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink font-bold">Marta</span>
                             </p>
-                            <h1 className="text-5xl md:text-7xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink tracking-tighter pb-2">
+                            <h1 className="text-5xl md:text-7xl font-medium text-gray-500 dark:text-gray-400 tracking-tighter pb-2">
                                 O que vamos criar hoje?
                             </h1>
                         </div>
                     )}
                 </div>
             )}
-
-            {/* The Input Box */}
+             
+             {/* Input Box */}
             <div className="max-w-3xl mx-auto w-full relative group">
                 <div className={`absolute -inset-0.5 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-[2rem] blur opacity-75 group-hover:opacity-100 transition duration-1000 ${!hasMessages ? 'opacity-100' : ''}`}></div>
                 <div className="relative bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-[2rem] p-4 shadow-xl">
@@ -816,30 +863,85 @@ ${MARTA_SYSTEM_INSTRUCTION}
                             </button>
                         </div>
 
-                        {/* Send Button */}
-                        <button 
-                            onClick={handleSendMessage}
-                            disabled={!inputValue.trim() || isLoading}
-                            className="w-10 h-10 rounded-xl bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-black flex items-center justify-center transition-colors disabled:opacity-50"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                        </button>
+                        <div className="flex items-center gap-2">
+                             {/* Model Selector */}
+                             <div className="relative" ref={modelSelectorRef}>
+                                <button 
+                                    onClick={() => setShowModelSelector(!showModelSelector)}
+                                    className={`
+                                        flex items-center gap-2 px-3 py-2 rounded-full transition-all text-xs font-bold uppercase tracking-wider
+                                        ${modelMode === 'fast' 
+                                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30' 
+                                            : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                                        }
+                                    `}
+                                    title="Selecionar Modelo"
+                                >
+                                    {modelMode === 'fast' ? (
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    ) : (
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                                    )}
+                                    <span className="hidden sm:inline">{modelMode === 'fast' ? 'Marta Rápida' : 'Marta Pensativa'}</span>
+                                </button>
+
+                                {showModelSelector && (
+                                    <div className="absolute bottom-full right-0 mb-3 w-64 bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800 p-2 z-50 animate-in slide-in-from-bottom-2 duration-200">
+                                        <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Modelos de IA</div>
+                                        <button 
+                                            onClick={() => { setModelMode('fast'); setShowModelSelector(false); }}
+                                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${modelMode === 'fast' ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-neutral-800'}`}
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">Marta Rápida</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Respostas instantâneas para tarefas diárias.</div>
+                                            </div>
+                                        </button>
+                                        <button 
+                                            onClick={() => { setModelMode('thinking'); setShowModelSelector(false); }}
+                                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left mt-1 ${modelMode === 'thinking' ? 'bg-purple-50 dark:bg-purple-900/20' : 'hover:bg-gray-50 dark:hover:bg-neutral-800'}`}
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">Marta Pensativa</div>
+                                                <div className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Raciocínio profundo e criatividade expandida.</div>
+                                            </div>
+                                        </button>
+                                    </div>
+                                )}
+                             </div>
+
+                             {/* Send Button */}
+                            <button 
+                                onClick={handleSendMessage}
+                                disabled={!inputValue.trim() || isLoading}
+                                className="w-10 h-10 rounded-xl bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-black flex items-center justify-center transition-colors disabled:opacity-50"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Quick Actions (Only on start) */}
+            {/* Quick Actions (Only on start) - Mobile Horizontal Scroll */}
             {!hasMessages && (
-                <div className="mt-8 flex flex-wrap justify-center gap-3 w-full max-w-5xl px-4 animate-in slide-in-from-bottom-8 duration-700 delay-100">
+                <div className="mt-8 flex overflow-x-auto md:flex-wrap gap-3 w-full max-w-5xl px-4 pb-4 md:pb-0 md:justify-center no-scrollbar snap-x">
                     {QUICK_ACTIONS.map((action, idx) => (
                         <button 
                             key={idx}
                             onClick={() => handleQuickAction(action.prompt)}
                             className={`
+                                flex-shrink-0 snap-center
                                 flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 group
                                 bg-white/5 dark:bg-neutral-900/80 backdrop-blur-sm
                                 ${action.border} border-gray-200 dark:border-neutral-800
-                                hover:scale-105 hover:shadow-lg
+                                hover:scale-105 hover:shadow-lg whitespace-nowrap
                             `}
                         >
                             <div className={`p-2 rounded-lg ${action.bg} ${action.color}`}>
@@ -858,5 +960,3 @@ ${MARTA_SYSTEM_INSTRUCTION}
     </div>
   );
 }
-
-export default App;

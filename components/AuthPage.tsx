@@ -5,18 +5,47 @@ import { MartaLogo } from './MartaLogo';
 interface AuthPageProps {
   onLoginSuccess: () => void;
   onClose: () => void;
+  initialIsRegister?: boolean;
 }
 
-export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onClose }) => {
+export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onClose, initialIsRegister = false }) => {
   const [loading, setLoading] = useState(false);
+  const [isRegister, setIsRegister] = useState(initialIsRegister);
+
+  // Form states (simulated)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation simulation
+    if (isRegister && formData.password !== formData.confirmPassword) {
+        alert("As senhas não coincidem.");
+        return;
+    }
+
     setLoading(true);
-    // Simulate API call
+    
+    // Simulate API call for Login or Register
     setTimeout(() => {
+        setLoading(false);
         onLoginSuccess();
     }, 1500);
+  };
+
+  const toggleMode = () => {
+    setIsRegister(!isRegister);
+    setLoading(false);
+    // Reset basic form data if needed, keeping simple for demo
   };
 
   return (
@@ -38,46 +67,113 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onClose }) =
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            {/* Left Column: Login Form */}
+            {/* Left Column: Form */}
             <div className="w-full lg:w-[40%] flex flex-col justify-center p-8 md:p-12 relative z-20 bg-white dark:bg-neutral-900 overflow-y-auto no-scrollbar">
                 <div className="w-full max-w-sm mx-auto">
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 mx-auto mb-6 transform hover:scale-105 transition-transform duration-300">
                              <MartaLogo className="w-full h-full" />
                         </div>
-                        <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-2">Bem-vindo de volta</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Identifique-se para acessar o sistema.</p>
+                        <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-2">
+                            {isRegister ? 'Crie sua conta' : 'Bem-vindo de volta'}
+                        </h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">
+                            {isRegister 
+                                ? 'Junte-se ao ecossistema Marta.' 
+                                : 'Identifique-se para acessar o sistema.'}
+                        </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="space-y-2">
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        
+                        {/* Name Field - Only for Register */}
+                        {isRegister && (
+                            <div className="space-y-1 animate-in slide-in-from-left-2 fade-in duration-300">
+                                <label className="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Nome Completo</label>
+                                <input 
+                                    type="text" 
+                                    name="name"
+                                    placeholder="Seu Nome" 
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    className="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors placeholder-gray-400" 
+                                    required={isRegister}
+                                />
+                            </div>
+                        )}
+
+                        <div className="space-y-1">
                             <label className="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Email Corporativo</label>
-                            <input type="email" placeholder="nome@empresa.com" className="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl px-4 py-3.5 text-gray-900 dark:text-white focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors placeholder-gray-400" required />
+                            <input 
+                                type="email" 
+                                name="email"
+                                placeholder="nome@empresa.com" 
+                                value={formData.email}
+                                onChange={handleChange}
+                                className="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors placeholder-gray-400" 
+                                required 
+                            />
                         </div>
                         
-                        <div className="space-y-2">
-                            <label className="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Chave de Acesso</label>
-                            <input type="password" placeholder="••••••••" className="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl px-4 py-3.5 text-gray-900 dark:text-white focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors placeholder-gray-400" required />
+                        <div className="space-y-1">
+                            <label className="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Senha</label>
+                            <input 
+                                type="password" 
+                                name="password"
+                                placeholder="••••••••" 
+                                value={formData.password}
+                                onChange={handleChange}
+                                className="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors placeholder-gray-400" 
+                                required 
+                            />
                         </div>
 
-                        <div className="pt-2">
+                        {/* Confirm Password - Only for Register */}
+                        {isRegister && (
+                            <div className="space-y-1 animate-in slide-in-from-left-2 fade-in duration-300">
+                                <label className="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Confirmar Senha</label>
+                                <input 
+                                    type="password" 
+                                    name="confirmPassword"
+                                    placeholder="••••••••" 
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    className="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors placeholder-gray-400" 
+                                    required={isRegister}
+                                />
+                            </div>
+                        )}
+
+                        <div className="pt-4">
                             <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-brand-purple/25 transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                 {loading ? (
                                     <>
                                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                        Autenticando...
+                                        {isRegister ? 'Criando conta...' : 'Autenticando...'}
                                     </>
                                 ) : (
-                                    'Iniciar Sessão Segura'
+                                    isRegister ? 'Criar Conta Gratuita' : 'Iniciar Sessão Segura'
                                 )}
                             </button>
                         </div>
                     </form>
 
+                    {/* Toggle Mode */}
+                    <div className="mt-6 text-center">
+                        <button 
+                            onClick={toggleMode}
+                            className="text-sm text-gray-600 dark:text-gray-400 hover:text-brand-purple dark:hover:text-brand-purple transition-colors font-medium"
+                        >
+                            {isRegister 
+                                ? 'Já possui uma conta? Entrar' 
+                                : 'Ainda não tem conta? Cadastre-se gratuitamente'}
+                        </button>
+                    </div>
+
                     <div className="mt-8 space-y-5">
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-neutral-700"></div></div>
-                            <div className="relative flex justify-center text-sm"><span className="px-4 bg-white dark:bg-neutral-900 rounded-full text-gray-400 dark:text-gray-500 text-xs uppercase">Single Sign-On</span></div>
+                            <div className="relative flex justify-center text-sm"><span className="px-4 bg-white dark:bg-neutral-900 rounded-full text-gray-400 dark:text-gray-500 text-xs uppercase">Ou continue com</span></div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

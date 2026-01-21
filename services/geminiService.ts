@@ -18,16 +18,26 @@ const getClient = async (requiresUserKey = false) => {
 export const sendMessageToGemini = async (
   history: { role: string; parts: { text: string }[] }[],
   message: string,
-  systemInstruction: string = MARTA_SYSTEM_INSTRUCTION
+  systemInstruction: string = MARTA_SYSTEM_INSTRUCTION,
+  modelMode: 'fast' | 'thinking' = 'fast'
 ): Promise<string> => {
   const ai = await getClient();
   
-  // Using chat instance with the SMART model (Pro) for better fluidity and human-like nuance
+  // Select model based on mode
+  const modelName = modelMode === 'thinking' ? MODEL_NAMES.TEXT_SMART : MODEL_NAMES.TEXT_FAST;
+  
+  const config: any = {
+    systemInstruction: systemInstruction,
+  };
+
+  // Enable thinking budget for the thinking mode
+  if (modelMode === 'thinking') {
+      config.thinkingConfig = { thinkingBudget: 1024 };
+  }
+
   const chat = ai.chats.create({
-    model: MODEL_NAMES.TEXT_SMART, 
-    config: {
-      systemInstruction: systemInstruction,
-    },
+    model: modelName, 
+    config: config,
     history: history.map(h => ({ role: h.role, parts: h.parts })),
   });
 
