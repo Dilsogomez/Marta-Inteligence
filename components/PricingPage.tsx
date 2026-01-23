@@ -4,7 +4,7 @@ import { MartaLogo } from './MartaLogo';
 import { CheckoutModal } from './CheckoutModal';
 
 interface PricingPageProps {
-  onNavigate: (view: 'chat' | 'features' | 'library' | 'solutions' | 'pricing') => void;
+  onNavigate: (view: 'chat' | 'pricing') => void;
   onLogin: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
@@ -16,13 +16,13 @@ const PLANS = [
   {
     id: 'starter',
     name: 'Starter',
-    credits: '50',
+    credits: '5/dia',
     price: '0',
     period: 'sempre',
     description: 'Experimente o poder da IA.',
     features: [
-      '50 Créditos/mês',
-      'Gemini 3.0 Flash',
+      '5 Créditos por dia',
+      'Não acumulativos',
       'Histórico de 7 dias',
       'Imagens Standard'
     ],
@@ -104,55 +104,51 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onLogin, i
           />
       )}
 
+      {/* Floating Dark Mode Button */}
+      <button
+          onClick={toggleTheme}
+          className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-white/80 dark:bg-neutral-900/80 shadow-lg border border-gray-200 dark:border-neutral-800 text-gray-600 dark:text-gray-300 hover:scale-110 transition-transform backdrop-blur-sm"
+          title="Alternar Tema"
+      >
+          {isDarkMode ? (
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+          ) : (
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+          )}
+      </button>
+
       {/* Header Bar - Replicated from App.tsx */}
       <div className="py-4 px-6 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md z-40 transition-colors duration-300 relative sticky top-0 border-b border-gray-200/50 dark:border-neutral-800/50">
           <div className="flex items-center gap-3">
               {/* Logo */}
               <div 
-                  onClick={() => onNavigate('chat')}
+                  onClick={() => window.location.reload()}
                   className="flex items-center gap-2 cursor-pointer transition-all hover:scale-105 group"
-                  title="Início"
+                  title="Recarregar aplicação"
               >
                   <div className="w-8 h-8">
                       <MartaLogo className="w-full h-full" />
                   </div>
               </div>
 
-              {/* Nav Links */}
-              <nav className="hidden md:flex items-center gap-6 ml-6 border-l border-gray-200 dark:border-neutral-800 pl-6 h-6">
-                  <button onClick={() => onNavigate('features')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Funcionalidades</button>
-                  <button onClick={() => onNavigate('library')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Biblioteca</button>
-                  <button onClick={() => onNavigate('solutions')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Soluções</button>
-                  <button onClick={() => onNavigate('pricing')} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Preços</button>
-                  <button onClick={onLogin} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-purple dark:hover:text-white transition-colors">Sobre</button>
-              </nav>
+              {/* Removed Navigation Menu */}
           </div>
           
           <div className="flex items-center gap-3">
-               {/* Dark Mode Toggle */}
-              <button
-                  onClick={toggleTheme}
-                  className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-neutral-800 transition-colors"
-              >
-                  {isDarkMode ? (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                  ) : (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-                  )}
-              </button>
+               {/* Dark Mode Toggle REMOVED FROM HERE */}
 
               <div className="flex items-center gap-3">
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border border-brand-purple/30 bg-brand-purple/5 dark:bg-brand-purple/10">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-brand-purple/30 bg-brand-purple/5 dark:bg-brand-purple/10">
                        <div className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-blue to-brand-pink animate-pulse"></div>
                        <span className="text-xs font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink">
-                           {availableCredits} Créditos
+                           {availableCredits} <span className="hidden sm:inline">Créditos</span>
                        </span>
                   </div>
                   <button 
                       onClick={onLogin}
-                      className="px-5 py-2 rounded-full bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink text-white text-xs font-bold tracking-wide hover:shadow-lg hover:shadow-brand-purple/20 hover:scale-105 transition-all flex items-center gap-2 group"
+                      className="w-8 h-8 md:w-auto md:h-auto p-0 md:px-5 md:py-2 rounded-full bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink text-white text-xs font-bold tracking-wide hover:shadow-lg hover:shadow-brand-purple/20 hover:scale-105 transition-all flex items-center justify-center gap-2 group"
                   >
-                      <span>Entrar</span>
+                      <span className="hidden md:inline">Entrar</span>
                       <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                   </button>
               </div>
@@ -200,7 +196,9 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onLogin, i
                             <span className="text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-purple">
                                 {plan.credits}
                             </span>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">Créditos</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase">
+                                {plan.id === 'starter' ? '' : 'Créditos'}
+                            </span>
                         </div>
                         
                         <div className="flex items-baseline gap-1 mb-4 pb-4 border-b border-gray-100 dark:border-neutral-800">
