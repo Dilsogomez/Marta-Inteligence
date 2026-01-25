@@ -1,6 +1,8 @@
+
+/* Fix: Refactored Live API session to comply with SDK guidelines, strictly using process.env.API_KEY and proper PCM stream handling. */
 import React, { useEffect, useRef, useState } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { API_KEY, MARTA_SYSTEM_INSTRUCTION, MODEL_NAMES } from '../constants';
+import { MARTA_SYSTEM_INSTRUCTION, MODEL_NAMES } from '../constants';
 import { createPcmBlob, decodeAudioData, base64ToUint8Array } from '../services/audioUtils';
 
 interface LiveInterfaceProps {
@@ -16,7 +18,7 @@ export const LiveInterface: React.FC<LiveInterfaceProps> = ({ onClose }) => {
   const inputContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
-  const sessionRef = useRef<any>(null); // To hold the session object/promise
+  const sessionRef = useRef<any>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -26,15 +28,16 @@ export const LiveInterface: React.FC<LiveInterfaceProps> = ({ onClose }) => {
 
     const startSession = async () => {
       try {
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
+        /* Fix: Initialize with process.env.API_KEY exclusively */
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
-        // Setup Output Audio
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        // Setup Output Audio (24kHz as per Live API standard)
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
         const outputNode = audioContextRef.current!.createGain();
         outputNode.connect(audioContextRef.current!.destination);
 
-        // Setup Input Audio
-        inputContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+        // Setup Input Audio (16kHz as per Live API standard)
+        inputContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
         const sessionPromise = ai.live.connect({
@@ -43,7 +46,7 @@ export const LiveInterface: React.FC<LiveInterfaceProps> = ({ onClose }) => {
             systemInstruction: MARTA_SYSTEM_INSTRUCTION,
             responseModalities: [Modality.AUDIO],
             speechConfig: {
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
             },
           },
           callbacks: {
@@ -56,14 +59,15 @@ export const LiveInterface: React.FC<LiveInterfaceProps> = ({ onClose }) => {
               scriptProcessor.onaudioprocess = (e) => {
                 const inputData = e.inputBuffer.getChannelData(0);
                 
-                // Simple volume visualization
+                // Visualization logic
                 let sum = 0;
                 for(let i=0; i<inputData.length; i++) sum += Math.abs(inputData[i]);
                 const avg = sum / inputData.length;
-                if (mounted) setVolume(Math.min(avg * 5, 1)); // Amplify for visual
+                if (mounted) setVolume(Math.min(avg * 5, 1));
 
                 const pcmBlob = createPcmBlob(inputData);
                 
+                /* Fix: Solely rely on sessionPromise resolution for sending input to avoid race conditions. */
                 sessionPromise.then(session => {
                   session.sendRealtimeInput({ media: pcmBlob });
                 });
@@ -75,8 +79,9 @@ export const LiveInterface: React.FC<LiveInterfaceProps> = ({ onClose }) => {
             onmessage: async (msg: LiveServerMessage) => {
               const base64Audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
               if (base64Audio && audioContextRef.current) {
-                // Audio received from Model
                 const ctx = audioContextRef.current;
+                
+                /* Fix: Gapless playback scheduling using nextStartTimeRef */
                 nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
                 
                 const audioBuffer = await decodeAudioData(
@@ -129,7 +134,6 @@ export const LiveInterface: React.FC<LiveInterfaceProps> = ({ onClose }) => {
 
     return () => {
       mounted = false;
-      // Cleanup
       if (sessionRef.current) {
         sessionRef.current.then((s: any) => s.close());
       }

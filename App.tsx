@@ -46,7 +46,7 @@ const QUICK_ACTIONS = [
   { 
     label: 'Criar imagem', 
     prompt: 'Gere uma imagem de ', 
-    icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+    icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
     color: 'text-yellow-500',
     bg: 'bg-yellow-500/10',
     border: 'border-yellow-500/20 hover:border-yellow-500/50'
@@ -211,16 +211,9 @@ export default function App() {
     setShowProfileMenu(false);
   };
 
-  const handleCreateAgent = (newAgent: Agent) => {
-      setAgents(prev => [...prev, newAgent]);
-      setCurrentAgentId(newAgent.id);
-      setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'model',
-          content: `Agente **${newAgent.name}** ativado. Especialidade: ${newAgent.role}. \n\nEstou pronta para seguir suas instruções: "${newAgent.instructions}"`,
-          type: 'text',
-          timestamp: Date.now()
-      }]);
+  const handleCreateAgent = (agent: Agent) => {
+    setAgents(prev => [...prev, agent]);
+    setShowCreateAgentModal(false);
   };
 
   const handleSelectSession = (sessionId: string) => {
@@ -409,9 +402,10 @@ ${MARTA_SYSTEM_INSTRUCTION}
       } else if (rawResponse.startsWith("Iniciando protocolo de vídeo:")) {
         const prompt = rawResponse.replace("Iniciando protocolo de vídeo:", "").trim();
         msgType = 'video';
-        if (!window.aistudio?.hasSelectedApiKey && !API_KEY) {
+        
+        if (window.aistudio && !(await window.aistudio.hasSelectedApiKey())) {
              responseText = "Para gerar vídeos com Veo, você precisa configurar uma chave de API paga.";
-             if(window.aistudio) await window.aistudio.openSelectKey();
+             await window.aistudio.openSelectKey();
         } else {
              responseText = `🎥 Gerando vídeo: "${prompt}"`;
              const url = await generateVideo(prompt);
@@ -539,7 +533,6 @@ ${MARTA_SYSTEM_INSTRUCTION}
             currentAgentId={currentAgentId}
             onSelectAgent={setCurrentAgentId}
             onCreateAgent={() => setShowCreateAgentModal(true)}
-            onLogout={handleLogout}
             isOpen={isSidebarOpen}
             toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             chatSessions={chatSessions}
@@ -552,9 +545,9 @@ ${MARTA_SYSTEM_INSTRUCTION}
       {/* Main Content - Now the main scroll container */}
       <main className="flex-1 flex flex-col relative z-10 w-full h-[100dvh] overflow-y-auto no-scrollbar scroll-smooth">
 
-        {/* Header Bar - Relative to the content, so it scrolls away */}
-        <div className="relative z-50 py-4 px-6 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md transition-colors duration-300 border-b border-transparent dark:border-white/5 w-full shrink-0">
-            <div className="flex items-center gap-3">
+        {/* Minimalist Floating Header */}
+        <div className="absolute top-0 left-0 right-0 z-50 p-6 flex items-center justify-between pointer-events-none">
+            <div className="flex items-center gap-3 pointer-events-auto">
                 {isLoggedIn && (
                     <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 -ml-2 text-gray-600 dark:text-gray-300">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -566,25 +559,21 @@ ${MARTA_SYSTEM_INSTRUCTION}
                 </div>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 pointer-events-auto">
                 {!isLoggedIn && (
                     <div className="flex items-center gap-3">
-                         <button onClick={() => setView('pricing')} className="flex items-center gap-2 px-3 py-1 rounded-full border border-brand-purple/30 bg-brand-purple/5 dark:bg-brand-purple/10 hover:bg-brand-purple/20 cursor-pointer transition-colors">
+                         <button onClick={() => setView('pricing')} className="flex items-center gap-2 px-3 py-1 rounded-full border border-brand-purple/30 bg-brand-purple/5 dark:bg-brand-purple/10 hover:bg-brand-purple/20 cursor-pointer transition-colors backdrop-blur-md">
                               <div className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-blue to-brand-pink animate-pulse"></div>
                               <span className="text-xs font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink">
                                   {totalAvailableCredits} <span className="hidden sm:inline">Créditos</span>
                               </span>
                          </button>
-                        <button onClick={() => openAuthModal('login')} className="w-8 h-8 md:w-auto md:h-auto p-0 md:px-5 md:py-2 rounded-full bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink text-white text-xs font-bold tracking-wide hover:shadow-lg hover:shadow-brand-purple/20 hover:scale-105 transition-all flex items-center justify-center gap-2 group">
-                            <span className="hidden md:inline">Entrar</span>
-                            <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                        </button>
                     </div>
                 )}
                 
                 {isLoggedIn && (
                     <div className="relative" ref={profileMenuRef}>
-                        <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-10 h-10 rounded-full bg-gray-200 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 flex items-center justify-center text-gray-500 dark:text-gray-300 cursor-pointer hover:bg-gray-300 dark:hover:bg-neutral-600 transition-colors outline-none focus:ring-2 focus:ring-brand-purple/50">
+                        <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-10 h-10 rounded-full bg-gray-200 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 flex items-center justify-center text-gray-500 dark:text-gray-300 cursor-pointer hover:bg-gray-300 dark:hover:bg-neutral-600 transition-colors outline-none focus:ring-2 focus:ring-brand-purple/50 backdrop-blur-md">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         </button>
                         
@@ -599,6 +588,11 @@ ${MARTA_SYSTEM_INSTRUCTION}
                                     <button onClick={() => setShowProfileMenu(false)} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors flex items-center gap-3">
                                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> Perfil
                                     </button>
+                                    
+                                    <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-3">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                        Sair
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -609,7 +603,7 @@ ${MARTA_SYSTEM_INSTRUCTION}
 
         {/* Messages Container - Auto expands in flex flow */}
         {hasMessages && (
-            <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-32">
+            <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-24 pb-32">
                 <div className="space-y-6">
                     {messages.map((msg) => (
                         <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -662,7 +656,7 @@ ${MARTA_SYSTEM_INSTRUCTION}
 
         {/* Input Area / Home Screen - Now relative/block to allow scrolling away */}
         <div className={!hasMessages 
-            ? `relative w-full flex flex-col items-center p-6 animate-in fade-in duration-500 min-h-[calc(100vh-80px)] ${showTemplates || showImageGallery || showAccountantGallery || showLegalGallery || showStudyGallery ? 'justify-start pt-10' : 'justify-center'}`
+            ? `relative w-full flex flex-col items-center p-6 animate-in fade-in duration-500 min-h-[calc(100vh-80px)] ${showTemplates || showImageGallery || showAccountantGallery || showLegalGallery || showStudyGallery ? 'justify-start pt-28' : 'justify-center'}`
             : "fixed bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-white via-white dark:from-black dark:via-black to-transparent pt-10 z-20 w-full"
         }>
              {!hasMessages && (
@@ -747,9 +741,9 @@ ${MARTA_SYSTEM_INSTRUCTION}
 
             {/* Quick Actions - Always visible if no messages */}
             {!hasMessages && (
-                <div className="mt-8 flex overflow-x-auto md:flex-wrap gap-3 w-full max-w-5xl px-4 md:justify-center no-scrollbar snap-x shrink-0 pb-8 sticky top-0 z-40 bg-white/50 dark:bg-black/50 backdrop-blur-sm py-4">
+                <div className="mt-8 flex overflow-x-auto gap-3 w-full max-w-5xl px-4 no-scrollbar snap-x shrink-0 pb-8 sticky top-0 z-40 py-4 pointer-events-none">
                     {QUICK_ACTIONS.map((action, idx) => (
-                        <button key={idx} onClick={() => handleQuickAction(action.prompt)} className={`flex-shrink-0 snap-center flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 group bg-white/5 dark:bg-neutral-900/80 backdrop-blur-sm ${action.border} border-gray-200 dark:border-neutral-800 hover:scale-105 hover:shadow-lg whitespace-nowrap`}>
+                        <button key={idx} onClick={() => handleQuickAction(action.prompt)} className={`pointer-events-auto flex-shrink-0 snap-center flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 group bg-white/5 dark:bg-neutral-900/80 backdrop-blur-sm ${action.border} border-gray-200 dark:border-neutral-800 hover:scale-105 hover:shadow-lg whitespace-nowrap`}>
                             <div className={`p-2 rounded-lg ${action.bg} ${action.color}`}>{action.icon}</div>
                             <span className="font-medium text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{action.label}</span>
                         </button>

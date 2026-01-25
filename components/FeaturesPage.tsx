@@ -55,8 +55,6 @@ export const FeaturesPage: React.FC<FeaturesPageProps> = ({ onNavigate, onLogin,
           </div>
           
           <div className="flex items-center gap-3">
-               {/* Dark Mode Toggle REMOVED FROM HERE */}
-
               <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-brand-purple/30 bg-brand-purple/5 dark:bg-brand-purple/10">
                        <div className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-blue to-brand-pink animate-pulse"></div>
@@ -64,13 +62,6 @@ export const FeaturesPage: React.FC<FeaturesPageProps> = ({ onNavigate, onLogin,
                            {availableCredits} <span className="hidden sm:inline">Créditos</span>
                        </span>
                   </div>
-                  <button 
-                      onClick={onLogin}
-                      className="w-8 h-8 md:w-auto md:h-auto p-0 md:px-5 md:py-2 rounded-full bg-gradient-to-r from-brand-blue via-brand-purple to-brand-pink text-white text-xs font-bold tracking-wide hover:shadow-lg hover:shadow-brand-purple/20 hover:scale-105 transition-all flex items-center justify-center gap-2 group"
-                  >
-                      <span className="hidden md:inline">Entrar</span>
-                      <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                  </button>
               </div>
           </div>
       </div>

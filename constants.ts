@@ -1,4 +1,6 @@
-export const API_KEY = process.env.API_KEY || 'AIzaSyA0QfWo_HD0pmuJUsh3M1WM3EiZ3-IdAes';
+
+/* Fix: Removed hardcoded API key to comply with security and SDK guidelines. API key must be exclusively from process.env.API_KEY */
+export const API_KEY = process.env.API_KEY!;
 
 export const MODEL_NAMES = {
   TEXT_FAST: 'gemini-3-flash-preview',

@@ -1,17 +1,12 @@
-import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
-import { API_KEY, MARTA_SYSTEM_INSTRUCTION, MODEL_NAMES } from "../constants";
+
+/* Fix: Refactored service to strictly use process.env.API_KEY and create new SDK instances before each call to ensure up-to-date configuration. */
+import { GoogleGenAI, Modality } from "@google/genai";
+import { MARTA_SYSTEM_INSTRUCTION, MODEL_NAMES } from "../constants";
 
 // Helper to check for user-selected key
-const getClient = async (requiresUserKey = false) => {
-  let key = process.env.API_KEY || API_KEY;
-  if (requiresUserKey && window.aistudio) {
-      if(await window.aistudio.hasSelectedApiKey()) {
-         // The environment variable is automatically updated by the window.aistudio flow in the background
-         // but we can also rely on the process.env.API_KEY being injected if we are in that environment.
-         key = process.env.API_KEY || key; 
-      }
-  }
-  return new GoogleGenAI({ apiKey: key });
+const getClient = () => {
+  /* Fix: Exclusively source API key from process.env.API_KEY as per SDK guidelines */
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 // Text Generation
@@ -21,7 +16,8 @@ export const sendMessageToGemini = async (
   systemInstruction: string = MARTA_SYSTEM_INSTRUCTION,
   modelMode: 'fast' | 'thinking' = 'fast'
 ): Promise<string> => {
-  const ai = await getClient();
+  /* Fix: Create a fresh client instance before making a content generation call */
+  const ai = getClient();
   
   // Select model based on mode
   const modelName = modelMode === 'thinking' ? MODEL_NAMES.TEXT_SMART : MODEL_NAMES.TEXT_FAST;
@@ -47,11 +43,11 @@ export const sendMessageToGemini = async (
 
 // Image Generation
 export const generateImage = async (prompt: string): Promise<string | null> => {
-  // Use user key for Pro image model, or default key for Flash image
-  const ai = await getClient();
+  /* Fix: Create a fresh client instance right before the call */
+  const ai = getClient();
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_NAMES.IMAGE_FAST, // Using Flash Image for speed/default
+      model: MODEL_NAMES.IMAGE_FAST,
       contents: {
         parts: [{ text: prompt }],
       },
@@ -71,8 +67,8 @@ export const generateImage = async (prompt: string): Promise<string | null> => {
 
 // Video Generation (Veo)
 export const generateVideo = async (prompt: string): Promise<string | null> => {
-  // Veo requires a user-selected key often in these demos
-  const ai = await getClient(true);
+  /* Fix: Creating a new GoogleGenAI instance right before making a Veo API call ensures it always uses the most up-to-date API key. */
+  const ai = getClient();
   
   try {
     let operation = await ai.models.generateVideos({
@@ -86,14 +82,15 @@ export const generateVideo = async (prompt: string): Promise<string | null> => {
     });
 
     while (!operation.done) {
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      /* Fix: Increased polling interval to 10 seconds for video operations to reduce unnecessary API requests. */
+      await new Promise(resolve => setTimeout(resolve, 10000));
       operation = await ai.operations.getVideosOperation({ operation: operation });
     }
 
     const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
     if (videoUri) {
-      // Fetch the actual video bytes using the key
-      const videoRes = await fetch(`${videoUri}&key=${process.env.API_KEY || API_KEY}`);
+      /* Fix: Ensure API_KEY is appended to the video URI when fetching binary data. */
+      const videoRes = await fetch(`${videoUri}&key=${process.env.API_KEY}`);
       const blob = await videoRes.blob();
       return URL.createObjectURL(blob);
     }
@@ -106,14 +103,15 @@ export const generateVideo = async (prompt: string): Promise<string | null> => {
 
 // Audio Transcription (STT)
 export const transcribeAudio = async (audioBase64: string): Promise<string> => {
-  const ai = await getClient();
+  /* Fix: Fresh instance creation before transcription call. */
+  const ai = getClient();
   const response = await ai.models.generateContent({
     model: MODEL_NAMES.AUDIO_TRANSCRIPTION,
     contents: {
       parts: [
         {
           inlineData: {
-            mimeType: 'audio/wav', // or the recorded mime type
+            mimeType: 'audio/pcm', // PCM is the standard raw format for SDK audio processing
             data: audioBase64,
           },
         },
@@ -126,7 +124,8 @@ export const transcribeAudio = async (audioBase64: string): Promise<string> => {
 
 // Text to Speech
 export const generateSpeech = async (text: string): Promise<ArrayBuffer | null> => {
-    const ai = await getClient();
+    /* Fix: Fresh instance creation before TTS call. */
+    const ai = getClient();
     try {
         const response = await ai.models.generateContent({
             model: MODEL_NAMES.TTS,
